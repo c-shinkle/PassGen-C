@@ -3,21 +3,10 @@
 #include <time.h>
 #include <assert.h>
 #include <unistd.h>
-#include <limits.h>
 
 char *LETTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 
-void shuffle_u32(uint32_t array[], uint32_t length) {
-    for (uint32_t i = 0; i < length; i++) {
-        uint32_t swap_index = random() % length;
-
-        uint32_t temp = array[i];
-        array[i] = array[swap_index];
-        array[swap_index] = temp;
-    }
-}
-
-int position(uint32_t val, const int *indices, int length) {
+int position(int val, const int *indices, int length) {
     for (int i = 0; i < length; i++) {
         if (indices[i] == val) {
             return i;
@@ -26,40 +15,38 @@ int position(uint32_t val, const int *indices, int length) {
     return -1;
 }
 
-void insert(int *indices, int amount, int index, int element) {
+void insert(int *indices, int index, int element) {
     for (int i = 2; i >= index; i--) {
         indices[i+1] = indices[i];
     }
     indices[index] = element;
 }
 
-int *get_four_random_indices(int *indices, long length, int amount) {
-    for (uint32_t j = length - amount, i = 0; j < length; j++, i++) {
-        long random_u32 = random() % length;
-        assert(random_u32 < INT32_MAX);
-        int pos = position(random_u32, indices, amount);
+int *get_four_random_indices(int indices[4], int length) {
+    for (int i = 0, j = length - 4; i < 4; i++, j++) {
+        int val = ((int) random()) % (j + 1);
+        int pos = position(val, indices, i + 1);
         if (pos == -1) {
-            indices[i] = random_u32;
+            indices[i] = val;
         } else {
-            insert(indices, amount, pos, j);
+            insert(indices, pos, j);
         }
     }
     return indices;
 }
 
-char sample(long length, uint32_t offset) {
+char sample(int length, uint32_t offset) {
     return LETTERS[(random() % length) + offset];
 }
 
-char *pass_gen(uint32_t length) {
+char *pass_gen(char *password, int length) {
     assert(length >= 4);
-    char *password = malloc((length + 1) * sizeof(char));
-    for (uint32_t i = 0; i < length; ++i) {
+    for (int i = 0; i < length; ++i) {
         password[i] = sample(94, 0);
     }
     password[length] = 0;
     int random_indices[4] = {-1, -1, -1, -1};
-    get_four_random_indices(random_indices, length, 4);
+    get_four_random_indices(random_indices, length);
     password[random_indices[0]] = sample(10, 00);// NUMBERS
     password[random_indices[1]] = sample(26, 10);// LOWERS
     password[random_indices[2]] = sample(26, 36);// UPPERS
@@ -84,11 +71,12 @@ int main() {
     uint32_t seed = mix(clock(), time(NULL), getpid());
 //    printf("Seed: %ud\n", seed);
     srandom(seed);
-    uint32_t i = 1000;
+    int i = 1000;
+    int length = 1000;
+    char password[length + 1];
     while (i--) {
-        char *password = pass_gen(1000);
+        pass_gen(password, length);
         printf("%s\n", password);
-        free(password);
     }
     return 0;
 }
