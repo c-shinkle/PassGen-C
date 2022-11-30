@@ -4,9 +4,9 @@
 #include <assert.h>
 #include <unistd.h>
 
-char *LETTERS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+const char *CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
 
-int position(int val, const int *indices, int length) {
+int position(int val, const int indices[4], int length) {
     for (int i = 0; i < length; i++) {
         if (indices[i] == val) {
             return i;
@@ -15,43 +15,51 @@ int position(int val, const int *indices, int length) {
     return -1;
 }
 
-void insert(int *indices, int index, int element) {
-    for (int i = 2; i >= index; i--) {
-        indices[i+1] = indices[i];
+void insert(int indices[4], int size, int pos, int element) {
+    for(int i = size; i != pos; i--) {
+        indices[i] = indices[i - 1];
     }
-    indices[index] = element;
+    indices[pos] = element;
 }
 
-int *get_four_random_indices(int indices[4], int length) {
-    for (int i = 0, j = length - 4; i < 4; i++, j++) {
-        int val = ((int) random()) % (j + 1);
-        int pos = position(val, indices, i + 1);
-        if (pos == -1) {
-            indices[i] = val;
+void get_four_random_indices(int indices[4], int length) {
+    int j = length - 4;
+    for (int i = 0; i < 4; i++, j++) {
+        int random_index = ((int) random()) % (j + 1);
+        int pos = position(random_index, indices, i);
+        if (pos >= 0) {
+            insert(indices, i, pos, j);
         } else {
-            insert(indices, pos, j);
+            indices[i] = random_index;
         }
     }
-    return indices;
 }
 
-char sample(int length, uint32_t offset) {
-    return LETTERS[(random() % length) + offset];
+char sample(int length, int offset) {
+    return CHARS[(((int) random()) % length) + offset];
 }
 
-char *pass_gen(char *password, int length) {
+void pass_gen(char *password, int length) {
     assert(length >= 4);
     for (int i = 0; i < length; ++i) {
         password[i] = sample(94, 0);
     }
     password[length] = 0;
-    int random_indices[4] = {-1, -1, -1, -1};
-    get_four_random_indices(random_indices, length);
+    int random_indices[4];
+    int j = length - 4;
+    for (int i = 0; i < 4; i++, j++) {
+        int random_index = ((int) random()) % (j + 1);
+        int pos = position(random_index, random_indices, i);
+        if (pos >= 0) {
+            insert(random_indices, i, pos, j);
+        } else {
+            random_indices[i] = random_index;
+        }
+    }
     password[random_indices[0]] = sample(10, 00);// NUMBERS
     password[random_indices[1]] = sample(26, 10);// LOWERS
     password[random_indices[2]] = sample(26, 36);// UPPERS
     password[random_indices[3]] = sample(32, 62);// SPECIALS
-    return password;
 }
 
 uint32_t mix(uint32_t a, uint32_t b, uint32_t c) {
@@ -71,7 +79,7 @@ int main() {
     uint32_t seed = mix(clock(), time(NULL), getpid());
 //    printf("Seed: %ud\n", seed);
     srandom(seed);
-    int i = 1000;
+    int i = 10000;
     int length = 1000;
     char password[length + 1];
     while (i--) {

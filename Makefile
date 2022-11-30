@@ -1,7 +1,7 @@
 run:
 	./bin/pass_gen
 
-build:
+release:
 	clang src/main.c -std=c17 -Ofast -o bin/pass_gen
 
 debug:
@@ -9,3 +9,6 @@ debug:
 
 clean:
 	rm -r bin/pass_gen
+
+copy: release
+	cp ./bin/pass_gen ~/Coding/Hyperfine/C
